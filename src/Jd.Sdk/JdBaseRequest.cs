@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -103,7 +104,7 @@ namespace Jd.Sdk
         protected async Task<TResponse> PostAsync<TResponse>()
             where TResponse : JdBaseResponse
         {
-            var signParams = new Dictionary<string, object>
+            var signParams = new Dictionary<string, string>
             {
                 {"method", Method},
                 {"app_key", _appKey},
@@ -152,11 +153,14 @@ namespace Jd.Sdk
             urlParams += "&sign=" + sign;
 
             var url = _baseUrl + "?" + urlParams.TrimStart('&');
+            Debug.WriteLine(url);
+            Debug.WriteLine($"param_json={HttpUtility.UrlEncode(_paramJson, Encoding.UTF8)}");
             var async = await url
                         .WithHeader("Content-Type", "application/x-www-form-urlencoded")
                         .PostStringAsync($"param_json={HttpUtility.UrlEncode(_paramJson, Encoding.UTF8)}");
 
             var @string = await async.Content.ReadAsStringAsync();
+            Debug.WriteLine(@string);
             try
             {
                 var flag = JsonConvert.DeserializeObject<Dictionary<string, JdResponseResultEntity>>(@string).First();

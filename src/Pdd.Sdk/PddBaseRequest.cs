@@ -5,7 +5,10 @@ using Common;
 using Flurl.Http;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Text;
+using System.Web;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace Pdd.Sdk
 {
@@ -41,6 +44,7 @@ namespace Pdd.Sdk
 
         protected PddBaseRequest(string clientId, string clientSecret)
         {
+            _timestamp = Time.GetTimeStampSecond();
             _clientId = clientId;
             _clientSecret = clientSecret;
         }
@@ -59,7 +63,7 @@ namespace Pdd.Sdk
         /// </summary>
         protected string AccessToken { get; set; }
 
-        public object DebugInfo { get; set; }
+        public object DebugInfo { get; private set; }
 
         protected async Task<TResponse> PostAsync<TResponse>()
             where TResponse : PddBaseResponse
@@ -86,27 +90,29 @@ namespace Pdd.Sdk
                     return val != null;
                 })
                 .ToDictionary(
-                    x => ConvertExtend.UpperToUnderline(x.Name), x => JsonConvert.SerializeObject(x.GetValue(this)));
+                    x => ConvertExtend.UpperToUnderline(x.Name), x => x.GetValue(this).ToString());
 
             foreach (var item in dicDerive)
             {
                 dicParams.Add(item.Key, item.Value);
             }
-            var sign = Sign.SignToMd5(dicParams.ToDictionary(x => x.Key, x => (object)x.Value), _clientSecret);
+            var sign = Sign.SignToMd5(dicParams.ToDictionary(x => x.Key, x => x.Value), _clientSecret);
             var urlParams = $"?sign={sign}";
             foreach (var item in dicParams)
             {
-                urlParams += $"&{item.Key}={item.Value}";
+                urlParams += $"&{item.Key}={HttpUtility.UrlEncode(item.Value, Encoding.UTF8)}";
             }
 
             var url = _baseUrl + urlParams;
+            Debug.WriteLine(url);
             var async = await url.PostStringAsync(string.Empty);
             var @string = await async.Content.ReadAsStringAsync();
+            Debug.WriteLine(@string);
             try
             {
                 if (@string.Contains("\"error_response\":{\"error_msg\":\"")) // todo 有注入的风险
                 {
-                    var resError = JsonConvert.DeserializeObject<KeyValuePair<string, object>>(@string);
+                    var resError = JsonConvert.DeserializeObject<KeyValuePair<string, string>>(@string);
                     DebugInfo = new
                     {
                         url,

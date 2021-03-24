@@ -2,6 +2,7 @@
 using System.Text;
 using System.Linq;
 using System.Security.Cryptography;
+using System;
 
 namespace Common
 {
@@ -13,11 +14,10 @@ namespace Common
         /// <param name="params"></param>
         /// <param name="secret"></param>
         /// <returns></returns>
-        public static string SignToMd5(Dictionary<string, object> @params, string secret)
+        public static string SignToMd5(Dictionary<string, string> @params, string secret)
         {
-            var sortDic = new SortedDictionary<string, object>(@params);
             var query = new StringBuilder(secret);
-            foreach (var item in sortDic)
+            foreach (var item in @params.OrderBy(x => x.Key, StringComparer.Ordinal))
             {
                 if (string.IsNullOrEmpty(item.Key)) continue;
                 query.Append(item.Key).Append(item.Value);
